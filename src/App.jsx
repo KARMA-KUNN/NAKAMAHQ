@@ -113,6 +113,7 @@ const NakamaHQ = () => {
     setNewCommunityData({ name: '', icon: '🌟', color: '#FF6B9D' });
     setJoinedCommunities([...joinedCommunities, newComm.fullName]);
   };
+  const [communities, setCommunities] = useState(() => {
     const saved = localStorage.getItem('nhq_communities');
     return saved ? JSON.parse(saved) : mockCommunities;
   });
