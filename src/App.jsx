@@ -113,6 +113,62 @@ const NakamaHQ = () => {
   const [createPostOpen, setCreatePostOpen] = useState(false);
   const [posts, setPosts] = useState(mockPosts);
   const [userVotes, setUserVotes] = useState({});
+  const [searchQuery, setSearchQuery] = useState('');
+  const [formData, setFormData] = useState({ title: '', content: '', community: 'Hq*anime' });
+
+  useEffect(() => {
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js')
+        .then(reg => console.log('SW Registered', reg))
+        .catch(err => console.log('SW Failed', err));
+    }
+  }, []);
+
+  const triggerTestNotification = () => {
+    if (Notification.permission === 'granted') {
+      new Notification('Nakama HQ', {
+        body: 'New Episode: Solo Leveling Ep 12 is now live!',
+        icon: '/favicon.ico'
+      });
+    } else {
+      Notification.requestPermission().then(permission => {
+        if (permission === 'granted') {
+          triggerTestNotification();
+        }
+      });
+    }
+  };
+
+  const handleCreatePost = (e) => {
+    if (e) e.preventDefault();
+    if (!formData.title) return;
+
+    const newPost = {
+      id: posts.length + 1,
+      type: 'text',
+      community: formData.community || 'Hq*anime',
+      author: 'you',
+      avatar: '👤',
+      title: formData.title,
+      content: formData.content,
+      upvotes: 1,
+      comments: 0,
+      timeAgo: 'Just now',
+    };
+    setPosts([newPost, ...posts]);
+    setCreatePostOpen(false);
+    setFormData({ title: '', content: '', community: 'Hq*anime' });
+    
+    // Smooth scroll to top to see new post
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const [activeFilter, setActiveFilter] = useState('hot');
+
+  const filteredPosts = posts.filter(post => 
+    post.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    post.content.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   const handleVote = (postId, voteType) => {
     const currentVote = userVotes[postId];
@@ -331,7 +387,12 @@ const NakamaHQ = () => {
         <div className="top-bar">
           <div className="search-bar">
             <Search size={20} />
-            <input type="text" placeholder="Search Nakama HQ..." />
+            <input 
+              type="text" 
+              placeholder="Search Nakama HQ..." 
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
           </div>
           <div className="top-actions">
             <button className="icon-btn">
@@ -376,15 +437,24 @@ const NakamaHQ = () => {
         {/* Feed Filters */}
         {(activeTab === 'home' || activeTab === 'community') && (
           <div className="feed-filters">
-            <button className="filter-btn active">
+            <button 
+              className={`filter-btn ${activeFilter === 'hot' ? 'active' : ''}`}
+              onClick={() => setActiveFilter('hot')}
+            >
               <TrendingUp size={16} />
               <span>Hot</span>
             </button>
-            <button className="filter-btn">
+            <button 
+              className={`filter-btn ${activeFilter === 'new' ? 'active' : ''}`}
+              onClick={() => setActiveFilter('new')}
+            >
               <BarChart3 size={16} />
               <span>New</span>
             </button>
-            <button className="filter-btn">
+            <button 
+              className={`filter-btn ${activeFilter === 'top' ? 'active' : ''}`}
+              onClick={() => setActiveFilter('top')}
+            >
               <ArrowUp size={16} />
               <span>Top</span>
             </button>
@@ -394,7 +464,7 @@ const NakamaHQ = () => {
         {/* Posts Feed */}
         {(activeTab === 'home' || activeTab === 'community') && (
           <div className="posts-feed">
-            {posts.map(post => (
+            {filteredPosts.map(post => (
               <PostCard key={post.id} post={post} />
             ))}
           </div>
@@ -412,7 +482,10 @@ const NakamaHQ = () => {
                 Access our dedicated {activeTab} platform with streaming links,
                 episode notifications, and community reviews.
               </p>
-              <button className="redirect-btn">
+              <button 
+                className="redirect-btn"
+                onClick={() => window.open(activeTab === 'anime' ? 'https://senpaiplay.vercel.app' : 'https://senpairead.vercel.app', '_blank')}
+              >
                 Go to {activeTab === 'anime' ? 'SenpaiPlay' : 'SenpaiRead'} →
               </button>
             </div>
@@ -537,12 +610,19 @@ const NakamaHQ = () => {
             </div>
             
             <div className="settings-section">
-              <h3>Theme</h3>
-              <div className="theme-selector">
+              <h3>Theme & Notifications</h3>
+              <div className="theme-selector mb-6">
                 <button className="theme-btn active">Dark</button>
                 <button className="theme-btn">Light</button>
                 <button className="theme-btn">Auto</button>
               </div>
+              <button 
+                className="gradient-btn w-full"
+                onClick={triggerTestNotification}
+                style={{ background: 'linear-gradient(135deg, #4ECDC4 0%, #556FFF 100%)', padding: '12px', border: 'none', borderRadius: '12px', color: 'white', fontWeight: '800', cursor: 'pointer' }}
+              >
+                🔔 Test Phone Notification
+              </button>
             </div>
           </div>
         )}
@@ -567,10 +647,14 @@ const NakamaHQ = () => {
               <button className="post-type-btn">Poll</button>
             </div>
             
-            <select className="community-select">
-              <option>Choose a community</option>
+            <select 
+              className="community-select"
+              value={formData.community}
+              onChange={(e) => setFormData({ ...formData, community: e.target.value })}
+            >
+              <option disabled>Choose a community</option>
               {mockCommunities.map(c => (
-                <option key={c.id}>{c.fullName}</option>
+                <option key={c.id} value={c.fullName}>{c.fullName}</option>
               ))}
             </select>
             
@@ -578,19 +662,28 @@ const NakamaHQ = () => {
               type="text" 
               className="post-title-input" 
               placeholder="Title"
+              value={formData.title}
+              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
             />
             
             <textarea 
               className="post-content-input" 
               placeholder="Text (optional)"
               rows={8}
+              value={formData.content}
+              onChange={(e) => setFormData({ ...formData, content: e.target.value })}
             />
             
             <div className="modal-actions">
               <button className="cancel-btn" onClick={() => setCreatePostOpen(false)}>
                 Cancel
               </button>
-              <button className="submit-btn">Post</button>
+              <button 
+                className="submit-btn"
+                onClick={handleCreatePost}
+              >
+                Post
+              </button>
             </div>
           </div>
         </div>
