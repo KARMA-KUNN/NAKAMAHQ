@@ -33,88 +33,109 @@ const mockCommunities = [
   { id: 6, name: 'music', fullName: 'Hq*music', icon: '🎵', members: '950K', color: '#C7CEEA' },
 ];
 
-const mockPosts = [
-  {
-    id: 1,
-    type: 'text',
-    community: 'Hq*anime',
-    author: 'sakura_warrior',
-    avatar: '🌸',
-    title: 'Just finished Attack on Titan - What an absolute masterpiece!',
-    content: 'I cannot believe how well they wrapped up the story. The character development, the plot twists, everything was perfect. What did you all think of the ending?',
-    upvotes: 2847,
-    comments: 342,
-    timeAgo: '3h ago',
-  },
-  {
-    id: 2,
-    type: 'image',
-    community: 'Hq*art',
-    author: 'digital_sensei',
-    avatar: '🎨',
-    title: 'My latest digital painting of Luffy from One Piece',
-    imageUrl: 'https://images.unsplash.com/photo-1578632767115-351597cf2477?w=800&h=600&fit=crop',
-    content: 'Spent about 15 hours on this piece. Tried a new lighting technique!',
-    upvotes: 4521,
-    comments: 156,
-    timeAgo: '5h ago',
-  },
-  {
-    id: 3,
-    type: 'poll',
-    community: 'Hq*anime',
-    author: 'poll_master_99',
-    avatar: '📊',
-    title: 'Best anime of 2024?',
-    pollOptions: [
-      { text: 'Frieren: Beyond Journey\'s End', votes: 3421, percentage: 45 },
-      { text: 'Demon Slayer Season 4', votes: 2134, percentage: 28 },
-      { text: 'My Hero Academia Season 7', votes: 1523, percentage: 20 },
-      { text: 'Jujutsu Kaisen Season 3', votes: 532, percentage: 7 },
-    ],
-    totalVotes: 7610,
-    upvotes: 1234,
-    comments: 89,
-    timeAgo: '1d ago',
-  },
-  {
-    id: 4,
-    type: 'link',
-    community: 'Hq*manga',
-    author: 'manga_news_bot',
-    avatar: '🤖',
-    title: 'New chapter of Chainsaw Man releases tomorrow!',
-    linkUrl: 'https://mangaplus.shueisha.co.jp',
-    linkDomain: 'mangaplus.shueisha.co.jp',
-    content: 'Official announcement from Shueisha. Get ready for some chaos!',
-    upvotes: 3892,
-    comments: 234,
-    timeAgo: '8h ago',
-  },
-  {
-    id: 5,
-    type: 'video',
-    community: 'Hq*cosplay',
-    author: 'cosplay_queen',
-    avatar: '👑',
-    title: 'My Makima cosplay transformation time-lapse',
-    videoUrl: 'https://images.unsplash.com/photo-1611162616475-46b635cb6868?w=800&h=600&fit=crop',
-    content: 'Full makeup and costume build. Took 6 hours total!',
-    upvotes: 5621,
-    comments: 278,
-    timeAgo: '12h ago',
-  },
-];
+// Initial data is handled in state initialization via localStorage or defaults
 
 const NakamaHQ = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [activeTab, setActiveTab] = useState('home');
   const [selectedCommunity, setSelectedCommunity] = useState(null);
   const [createPostOpen, setCreatePostOpen] = useState(false);
-  const [posts, setPosts] = useState(mockPosts);
-  const [userVotes, setUserVotes] = useState({});
+  
+  // Persistence Layer
+  const [posts, setPosts] = useState(() => {
+    const saved = localStorage.getItem('nhq_posts');
+    return saved ? JSON.parse(saved) : [
+      {
+        id: 'welcome-1',
+        type: 'text',
+        community: 'Hq*announcements',
+        author: 'NakamaHq_Team',
+        avatar: '💎',
+        title: 'Welcome to the new Nakama HQ! 🎌',
+        content: 'Your ultimate anime social hub is now live. Join communities, share your favorite moments, and connect with other nakamas. Start by creating your first post!',
+        upvotes: 99,
+        comments: 0,
+        timeAgo: 'Just now',
+      }
+    ];
+  });
+
+  const [joinedCommunities, setJoinedCommunities] = useState(() => {
+    const saved = localStorage.getItem('nhq_joined');
+    return saved ? JSON.parse(saved) : ['Hq*anime', 'Hq*manga'];
+  });
+
+  const [userVotes, setUserVotes] = useState(() => {
+    const saved = localStorage.getItem('nhq_votes');
+    return saved ? JSON.parse(saved) : {};
+  });
+
+  const [messagingState, setMessagingState] = useState(() => {
+    const saved = localStorage.getItem('nhq_messages');
+    return saved ? JSON.parse(saved) : {
+      activeChatId: 1,
+      threads: {
+        1: {
+          id: 1,
+          name: 'Hq*anime Squad',
+          avatar: '🌸',
+          members: '12 members',
+          messages: [
+            { id: 1, sender: 'sakura_warrior', text: "Ready for tonight's episode?", time: '2:34 PM', isMe: false }
+          ]
+        }
+      }
+    };
+  });
+
   const [searchQuery, setSearchQuery] = useState('');
-  const [formData, setFormData] = useState({ title: '', content: '', community: 'Hq*anime' });
+  const [formData, setFormData] = useState({ title: '', content: '', community: 'Hq*anime', type: 'text', mediaUrl: '' });
+
+  const [viewedUser, setViewedUser] = useState(null);
+  const [createCommunityOpen, setCreateCommunityOpen] = useState(false);
+  const [newCommunityData, setNewCommunityData] = useState({ name: '', icon: '🌟', color: '#FF6B9D' });
+
+  const handleCreateCommunity = (e) => {
+    if (e) e.preventDefault();
+    if (!newCommunityData.name) return;
+    
+    const newComm = {
+      id: Date.now(),
+      name: newCommunityData.name.toLowerCase().replace(/\s+/g, '_'),
+      fullName: `Hq*${newCommunityData.name.toLowerCase()}`,
+      icon: newCommunityData.icon,
+      members: '1',
+      color: newCommunityData.color
+    };
+    
+    setCommunities([...communities, newComm]);
+    setCreateCommunityOpen(false);
+    setNewCommunityData({ name: '', icon: '🌟', color: '#FF6B9D' });
+    setJoinedCommunities([...joinedCommunities, newComm.fullName]);
+  };
+    const saved = localStorage.getItem('nhq_communities');
+    return saved ? JSON.parse(saved) : mockCommunities;
+  });
+
+  const [followStatus, setFollowStatus] = useState(() => {
+    const saved = localStorage.getItem('nhq_following');
+    return saved ? JSON.parse(saved) : {};
+  });
+
+  const [notifications, setNotifications] = useState([
+    { id: 1, type: 'follow', user: 'sakura_warrior', time: '5m ago', read: false },
+    { id: 2, type: 'upvote', user: 'digital_sensei', time: '1h ago', post: 'My Makima cosplay...', read: true },
+    { id: 3, type: 'comment', user: 'poll_master_99', time: '2h ago', text: 'Great point!', read: true },
+  ]);
+
+  useEffect(() => {
+    localStorage.setItem('nhq_posts', JSON.stringify(posts));
+    localStorage.setItem('nhq_votes', JSON.stringify(userVotes));
+    localStorage.setItem('nhq_joined', JSON.stringify(joinedCommunities));
+    localStorage.setItem('nhq_messages', JSON.stringify(messagingState));
+    localStorage.setItem('nhq_communities', JSON.stringify(communities));
+    localStorage.setItem('nhq_following', JSON.stringify(followStatus));
+  }, [posts, userVotes, joinedCommunities, messagingState, communities, followStatus]);
 
   useEffect(() => {
     if ('serviceWorker' in navigator) {
@@ -144,31 +165,66 @@ const NakamaHQ = () => {
     if (!formData.title) return;
 
     const newPost = {
-      id: posts.length + 1,
-      type: 'text',
+      id: Date.now(),
+      type: formData.type || 'text',
       community: formData.community || 'Hq*anime',
       author: 'you',
       avatar: '👤',
       title: formData.title,
       content: formData.content,
+      imageUrl: formData.type === 'image' ? formData.mediaUrl : null,
+      videoUrl: formData.type === 'video' ? formData.mediaUrl : null,
       upvotes: 1,
       comments: 0,
       timeAgo: 'Just now',
     };
     setPosts([newPost, ...posts]);
     setCreatePostOpen(false);
-    setFormData({ title: '', content: '', community: 'Hq*anime' });
-    
-    // Smooth scroll to top to see new post
+    setFormData({ title: '', content: '', community: 'Hq*anime', type: 'text', mediaUrl: '' });
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleSendMessage = (text) => {
+    if (!text.trim()) return;
+    const threadId = messagingState.activeChatId;
+    const newMessage = {
+      id: Date.now(),
+      sender: 'you',
+      text,
+      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      isMe: true
+    };
+    
+    setMessagingState(prev => ({
+      ...prev,
+      threads: {
+        ...prev.threads,
+        [threadId]: {
+          ...prev.threads[threadId],
+          messages: [...prev.threads[threadId].messages, newMessage]
+        }
+      }
+    }));
   };
 
   const [activeFilter, setActiveFilter] = useState('hot');
 
-  const filteredPosts = posts.filter(post => 
-    post.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    post.content.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredPosts = posts.filter(post => {
+    const matchesSearch = post.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                         post.content.toLowerCase().includes(searchQuery.toLowerCase());
+    
+    if (!matchesSearch) return false;
+
+    if (activeTab === 'home') {
+      return joinedCommunities.includes(post.community) || post.author === 'you' || post.id === 'welcome-1';
+    }
+    
+    if (activeTab === 'community' && selectedCommunity) {
+      return post.community === selectedCommunity.fullName;
+    }
+
+    return true; // Show all in 'All Communities' if no community selected
+  });
 
   const handleVote = (postId, voteType) => {
     const currentVote = userVotes[postId];
@@ -221,7 +277,10 @@ const NakamaHQ = () => {
           <div className="post-header">
             <div className="post-meta">
               <span className="community-tag">{post.community}</span>
-              <span className="post-author">
+              <span 
+                className="post-author clickable"
+                onClick={() => { setViewedUser(post.author); setActiveTab('profile'); }}
+              >
                 <span className="author-avatar">{post.avatar}</span>
                 u/{post.author}
               </span>
@@ -349,6 +408,13 @@ const NakamaHQ = () => {
               <span>My Nakamas</span>
             </button>
             <button 
+              className={`nav-item ${activeTab === 'profile' ? 'active' : ''}`}
+              onClick={() => setActiveTab('profile')}
+            >
+              <User size={20} />
+              <span>Profile</span>
+            </button>
+            <button 
               className={`nav-item ${activeTab === 'settings' ? 'active' : ''}`}
               onClick={() => setActiveTab('settings')}
             >
@@ -359,8 +425,13 @@ const NakamaHQ = () => {
             <div className="sidebar-divider"></div>
             
             <div className="communities-section">
-              <h3 className="section-title">TOP COMMUNITIES</h3>
-              {mockCommunities.map(community => (
+              <div className="section-header">
+                <h3 className="section-title">COMMUNITIES</h3>
+                <button className="add-comm-btn" onClick={() => setCreateCommunityOpen(true)}>
+                  <Plus size={14} />
+                </button>
+              </div>
+              {communities.map(community => (
                 <button 
                   key={community.id}
                   className="community-item"
@@ -395,11 +466,38 @@ const NakamaHQ = () => {
             />
           </div>
           <div className="top-actions">
-            <button className="icon-btn">
-              <Bell size={20} />
-              <span className="notification-badge">5</span>
-            </button>
-            <button className="icon-btn">
+            <div className="notifications-wrapper">
+              <button className="icon-btn" onClick={() => setNotificationsOpen(!notificationsOpen)}>
+                <Bell size={20} />
+                {notifications.some(n => !n.read) && <span className="notification-badge">{notifications.filter(n => !n.read).length}</span>}
+              </button>
+              
+              {notificationsOpen && (
+                <div className="notifications-dropdown">
+                  <div className="dropdown-header">
+                    <h3>Notifications</h3>
+                    <button onClick={() => setNotifications(notifications.map(n => ({ ...n, read: true })))}>Mark all read</button>
+                  </div>
+                  <div className="notifications-list">
+                    {notifications.length > 0 ? notifications.map(n => (
+                      <div key={n.id} className={`notification-item ${!n.read ? 'unread' : ''}`}>
+                        <div className="notif-avatar">{n.user[0].toUpperCase()}</div>
+                        <div className="notif-content">
+                          <p>
+                            <strong>u/{n.user}</strong> {n.type === 'follow' ? 'started following you' : n.type === 'upvote' ? 'upvoted your post' : 'commented on your post'}
+                          </p>
+                          <span className="notif-time">{n.time}</span>
+                        </div>
+                        {!n.read && <div className="unread-dot"></div>}
+                      </div>
+                    )) : (
+                      <div className="empty-notifs">No notifications yet</div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+            <button className="icon-btn" onClick={() => { setViewedUser(null); setActiveTab('profile'); }}>
               <User size={20} />
             </button>
           </div>
@@ -428,11 +526,26 @@ const NakamaHQ = () => {
             )}
           </div>
           
-          <button className="create-post-btn" onClick={() => setCreatePostOpen(true)}>
-            <Plus size={20} />
-            <span>Create Post</span>
-          </button>
-        </div>
+            <button className="create-post-btn" onClick={() => setCreatePostOpen(true)}>
+              <Plus size={20} />
+              <span>Create Post</span>
+            </button>
+            {selectedCommunity && (
+              <button 
+                className={`join-btn ${joinedCommunities.includes(selectedCommunity.fullName) ? 'joined' : ''}`}
+                onClick={() => {
+                  const name = selectedCommunity.fullName;
+                  if (joinedCommunities.includes(name)) {
+                    setJoinedCommunities(joinedCommunities.filter(c => c !== name));
+                  } else {
+                    setJoinedCommunities([...joinedCommunities, name]);
+                  }
+                }}
+              >
+                {joinedCommunities.includes(selectedCommunity.fullName) ? 'Joined' : 'Join'}
+              </button>
+            )}
+          </div>
 
         {/* Feed Filters */}
         {(activeTab === 'home' || activeTab === 'community') && (
@@ -458,6 +571,69 @@ const NakamaHQ = () => {
               <ArrowUp size={16} />
               <span>Top</span>
             </button>
+          </div>
+        )}
+
+        {/* Profile Tab */}
+        {activeTab === 'profile' && (
+          <div className="profile-page">
+            <div className="profile-banner">
+              <div className="profile-stats">
+                <div className="stat">
+                  <span className="stat-value">{posts.filter(p => p.author === (viewedUser || 'you')).length}</span>
+                  <span className="stat-label">Posts</span>
+                </div>
+                <div className="stat">
+                  <span className="stat-value">{viewedUser ? (followStatus[viewedUser]?.followers || 124) : Object.keys(userVotes).length}</span>
+                  <span className="stat-label">{viewedUser ? 'Followers' : 'Karma'}</span>
+                </div>
+                <div className="stat">
+                  <span className="stat-value">{viewedUser ? 42 : 156}</span>
+                  <span className="stat-label">Following</span>
+                </div>
+              </div>
+            </div>
+            <div className="profile-header-main">
+              <div className="profile-avatar-large">
+                {viewedUser ? viewedUser[0].toUpperCase() : '👤'}
+              </div>
+              <div className="profile-info-actions">
+                <div>
+                  <h2>u/{viewedUser || 'you'}</h2>
+                  <p>Nakama since {viewedUser ? 'Jan 2024' : 'April 2024'}</p>
+                </div>
+                {viewedUser && (
+                  <button 
+                    className={`follow-btn ${followStatus[viewedUser]?.isFollowing ? 'following' : ''}`}
+                    onClick={() => {
+                      const isFollowing = !followStatus[viewedUser]?.isFollowing;
+                      setFollowStatus({
+                        ...followStatus,
+                        [viewedUser]: {
+                          isFollowing,
+                          followers: (followStatus[viewedUser]?.followers || 124) + (isFollowing ? 1 : -1)
+                        }
+                      });
+                    }}
+                  >
+                    {followStatus[viewedUser]?.isFollowing ? 'Following' : 'Follow'}
+                  </button>
+                )}
+              </div>
+            </div>
+            
+            <div className="posts-feed">
+              <h3 className="section-title">{viewedUser ? `${viewedUser}'s Posts` : 'YOUR POSTS'}</h3>
+              {posts.filter(p => p.author === (viewedUser || 'you')).length > 0 ? (
+                posts.filter(p => p.author === (viewedUser || 'you')).map(post => (
+                  <PostCard key={post.id} post={post} />
+                ))
+              ) : (
+                <div className="empty-state">
+                  <p>{viewedUser ? 'This user has no posts yet.' : "You haven't posted anything yet."}</p>
+                </div>
+              )}
+            </div>
           </div>
         )}
 
@@ -539,41 +715,37 @@ const NakamaHQ = () => {
             
             <div className="chat-area">
               <div className="chat-header">
-                <div className="chat-avatar">🌸</div>
+                <div className="chat-avatar">{messagingState.threads[messagingState.activeChatId]?.avatar}</div>
                 <div className="chat-title">
-                  <div className="chat-name">Hq*anime Squad</div>
-                  <div className="chat-members">12 members</div>
+                  <div className="chat-name">{messagingState.threads[messagingState.activeChatId]?.name}</div>
+                  <div className="chat-members">{messagingState.threads[messagingState.activeChatId]?.members}</div>
                 </div>
               </div>
               
               <div className="chat-messages">
-                <div className="message received">
-                  <div className="message-avatar">🌸</div>
-                  <div className="message-content">
-                    <div className="message-author">sakura_warrior</div>
-                    <div className="message-text">
-                      Ready for tonight's episode?
+                {messagingState.threads[messagingState.activeChatId]?.messages.map(msg => (
+                  <div key={msg.id} className={`message ${msg.isMe ? 'sent' : 'received'}`}>
+                    {!msg.isMe && <div className="message-avatar">🌸</div>}
+                    <div className="message-content">
+                      {!msg.isMe && <div className="message-author">{msg.sender}</div>}
+                      <div className="message-text">{msg.text}</div>
+                      <div className="message-time">{msg.time}</div>
                     </div>
-                    <div className="message-time">2:34 PM</div>
                   </div>
-                </div>
-                
-                <div className="message sent">
-                  <div className="message-content">
-                    <div className="message-text">
-                      Absolutely! Can't wait to see what happens!
-                    </div>
-                    <div className="message-time">2:35 PM</div>
-                  </div>
-                </div>
+                ))}
               </div>
               
-              <div className="chat-input">
-                <input type="text" placeholder="Message Hq*anime Squad..." />
-                <button className="send-btn">
+              <form className="chat-input" onSubmit={(e) => {
+                e.preventDefault();
+                const input = e.target.elements.msgInput;
+                handleSendMessage(input.value);
+                input.value = '';
+              }}>
+                <input name="msgInput" type="text" placeholder={`Message ${messagingState.threads[messagingState.activeChatId]?.name}...`} />
+                <button type="submit" className="send-btn">
                   <Send size={20} />
                 </button>
-              </div>
+              </form>
             </div>
           </div>
         )}
@@ -628,6 +800,74 @@ const NakamaHQ = () => {
         )}
       </div>
 
+      {/* Bottom Navigation for Mobile */}
+      <div className="bottom-nav sm:hidden">
+        <button className={activeTab === 'home' ? 'active' : ''} onClick={() => { setActiveTab('home'); setSelectedCommunity(null); setViewedUser(null); }}>
+          <Home size={24} />
+        </button>
+        <button className={activeTab === 'community' ? 'active' : ''} onClick={() => setActiveTab('community')}>
+          <Users size={24} />
+        </button>
+        <button onClick={() => setCreatePostOpen(true)}>
+          <div className="plus-nav">
+            <Plus size={24} />
+          </div>
+        </button>
+        <button className={activeTab === 'nakamas' ? 'active' : ''} onClick={() => setActiveTab('nakamas')}>
+          <MessageSquare size={24} />
+        </button>
+        <button className={activeTab === 'profile' ? 'active' : ''} onClick={() => { setViewedUser(null); setActiveTab('profile'); }}>
+          <User size={24} />
+        </button>
+      </div>
+
+      {/* Create Community Modal */}
+      {createCommunityOpen && (
+        <div className="modal-overlay" onClick={() => setCreateCommunityOpen(false)}>
+          <div className="modal-content community-modal" onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>Create a Community</h2>
+              <button onClick={() => setCreateCommunityOpen(false)}>
+                <X size={24} />
+              </button>
+            </div>
+            
+            <div className="input-group">
+              <label>Community Name</label>
+              <div className="prefix-input">
+                <span className="prefix">Hq*</span>
+                <input 
+                  type="text" 
+                  placeholder="anime, art, etc..."
+                  value={newCommunityData.name}
+                  onChange={(e) => setNewCommunityData({ ...newCommunityData, name: e.target.value })}
+                />
+              </div>
+            </div>
+            
+            <div className="input-group">
+              <label>Icon</label>
+              <div className="emoji-selector">
+                {['🎌', '🌟', '🎮', '🎨', '🎵', '👘', '📚'].map(emoji => (
+                  <button 
+                    key={emoji}
+                    className={newCommunityData.icon === emoji ? 'active' : ''}
+                    onClick={() => setNewCommunityData({ ...newCommunityData, icon: emoji })}
+                  >
+                    {emoji}
+                  </button>
+                ))}
+              </div>
+            </div>
+            
+            <div className="modal-actions">
+              <button className="cancel-btn" onClick={() => setCreateCommunityOpen(false)}>Cancel</button>
+              <button className="submit-btn" onClick={handleCreateCommunity}>Create</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Create Post Modal */}
       {createPostOpen && (
         <div className="modal-overlay" onClick={() => setCreatePostOpen(false)}>
@@ -640,11 +880,15 @@ const NakamaHQ = () => {
             </div>
             
             <div className="create-post-types">
-              <button className="post-type-btn active">Text</button>
-              <button className="post-type-btn">Image</button>
-              <button className="post-type-btn">Video</button>
-              <button className="post-type-btn">Link</button>
-              <button className="post-type-btn">Poll</button>
+              {['text', 'image', 'video', 'poll'].map(type => (
+                <button 
+                  key={type}
+                  className={`post-type-btn ${formData.type === type ? 'active' : ''}`}
+                  onClick={() => setFormData({ ...formData, type })}
+                >
+                  {type.charAt(0).toUpperCase() + type.slice(1)}
+                </button>
+              ))}
             </div>
             
             <select 
@@ -665,11 +909,41 @@ const NakamaHQ = () => {
               value={formData.title}
               onChange={(e) => setFormData({ ...formData, title: e.target.value })}
             />
+
+            {(formData.type === 'image' || formData.type === 'video') && (
+              <div style={{ margin: '0 24px 16px' }}>
+                <input 
+                  type="file" 
+                  accept={formData.type === 'image' ? "image/*" : "video/*"}
+                  onChange={(e) => {
+                    const file = e.target.files[0];
+                    if (file) setFormData({ ...formData, mediaUrl: URL.createObjectURL(file) });
+                  }}
+                  className="hidden"
+                  id="media-upload"
+                />
+                <label 
+                  htmlFor="media-upload" 
+                  className="flex flex-col items-center justify-center p-8 border-2 border-dashed border-white/10 rounded-xl cursor-pointer hover:border-pink-500 transition-all"
+                >
+                  {formData.mediaUrl ? (
+                    formData.type === 'image' ? 
+                    <img src={formData.mediaUrl} className="max-h-32 rounded-lg" alt="Preview" /> :
+                    <div className="text-cyan">Video selected!</div>
+                  ) : (
+                    <>
+                      <Plus size={32} className="text-white/20 mb-2" />
+                      <span className="text-sm text-white/50">Click to upload {formData.type}</span>
+                    </>
+                  )}
+                </label>
+              </div>
+            )}
             
             <textarea 
               className="post-content-input" 
               placeholder="Text (optional)"
-              rows={8}
+              rows={formData.type === 'text' ? 8 : 3}
               value={formData.content}
               onChange={(e) => setFormData({ ...formData, content: e.target.value })}
             />
@@ -862,6 +1136,308 @@ const NakamaHQ = () => {
           color: rgba(255, 255, 255, 0.5);
         }
 
+        .section-header {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding-right: 16px;
+        }
+
+        .add-comm-btn {
+          width: 24px;
+          height: 24px;
+          border-radius: 6px;
+          background: rgba(255, 255, 255, 0.05);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          color: white;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          transition: all 0.2s;
+        }
+
+        .add-comm-btn:hover {
+          background: rgba(255,255,255,0.15);
+          border-color: #FF6B9D;
+        }
+
+        /* ===== NOTIFICATIONS ===== */
+        .notifications-wrapper {
+          position: relative;
+        }
+
+        .notifications-dropdown {
+          position: absolute;
+          top: calc(100% + 12px);
+          right: 0;
+          width: 320px;
+          background: #14182d;
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          border-radius: 16px;
+          box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+          z-index: 1000;
+          overflow: hidden;
+        }
+
+        .dropdown-header {
+          padding: 16px;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .dropdown-header h3 {
+          font-size: 14px;
+          font-weight: 700;
+        }
+
+        .dropdown-header button {
+          background: transparent;
+          border: none;
+          color: #FF6B9D;
+          font-size: 12px;
+          font-weight: 600;
+          cursor: pointer;
+        }
+
+        .notifications-list {
+          max-height: 400px;
+          overflow-y: auto;
+        }
+
+        .notification-item {
+          padding: 12px 16px;
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          transition: background 0.2s;
+          position: relative;
+        }
+
+        .notification-item.unread {
+          background: rgba(255, 107, 157, 0.05);
+        }
+
+        .notification-item:hover {
+          background: rgba(255, 255, 255, 0.03);
+        }
+
+        .notif-avatar {
+          width: 36px;
+          height: 36px;
+          border-radius: 10px;
+          background: linear-gradient(135deg, #4ECDC4 0%, #556FFF 100%);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-weight: 800;
+          font-size: 14px;
+        }
+
+        .notif-content p {
+          font-size: 13px;
+          line-height: 1.4;
+          color: rgba(255, 255, 255, 0.8);
+        }
+
+        .notif-content strong {
+          color: #ffffff;
+        }
+
+        .notif-time {
+          font-size: 11px;
+          color: rgba(255, 255, 255, 0.4);
+        }
+
+        .unread-dot {
+          width: 8px;
+          height: 8px;
+          background: #FF6B9D;
+          border-radius: 50%;
+          flex-shrink: 0;
+        }
+
+        .empty-notifs {
+          padding: 32px;
+          text-align: center;
+          color: rgba(255, 255, 255, 0.3);
+          font-size: 13px;
+        }
+
+        /* ===== BOTTOM NAV (MOBILE) ===== */
+        .bottom-nav {
+          position: fixed;
+          bottom: 0;
+          left: 0;
+          right: 0;
+          height: 70px;
+          background: rgba(20, 24, 45, 0.95);
+          backdrop-filter: blur(20px);
+          border-top: 1px solid rgba(255, 255, 255, 0.05);
+          display: flex;
+          align-items: center;
+          justify-content: space-around;
+          padding: 0 10px;
+          z-index: 1000;
+        }
+
+        .bottom-nav button {
+          background: transparent;
+          border: none;
+          color: rgba(255, 255, 255, 0.4);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 10px;
+          cursor: pointer;
+          transition: all 0.2s;
+        }
+
+        .bottom-nav button.active {
+          color: #FF6B9D;
+        }
+
+        .plus-nav {
+          width: 48px;
+          height: 48px;
+          background: linear-gradient(135deg, #FF6B9D 0%, #C06FF9 100%);
+          border-radius: 16px;
+          color: white;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          box-shadow: 0 8px 20px rgba(255, 107, 157, 0.4);
+          transform: translateY(-5px);
+        }
+
+        @media (min-width: 769px) {
+          .bottom-nav {
+            display: none;
+          }
+        }
+
+        @media (max-width: 768px) {
+          .sidebar {
+            display: none;
+          }
+          .main-content {
+            margin-left: 0 !important;
+            padding-bottom: 80px;
+          }
+          .feed-header {
+            flex-direction: column;
+            gap: 16px;
+            align-items: flex-start;
+          }
+          .profile-stats {
+            position: static;
+            justify-content: center;
+            margin-top: 24px;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 16px;
+          }
+        }
+
+        /* ===== COMMUNITY MODAL ===== */
+        .community-modal {
+          max-width: 400px;
+        }
+
+        .input-group {
+          padding: 0 24px 20px;
+        }
+
+        .input-group label {
+          display: block;
+          font-size: 13px;
+          font-weight: 700;
+          color: rgba(255, 255, 255, 0.6);
+          margin-bottom: 10px;
+        }
+
+        .prefix-input {
+          display: flex;
+          background: rgba(255, 255, 255, 0.05);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          border-radius: 12px;
+          overflow: hidden;
+        }
+
+        .prefix {
+          padding: 12px 16px;
+          background: rgba(255, 255, 255, 0.05);
+          color: #FF6B9D;
+          font-weight: 800;
+          border-right: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .prefix-input input {
+          background: transparent;
+          border: none;
+          padding: 12px 16px;
+          color: white;
+          width: 100%;
+          outline: none;
+        }
+
+        .emoji-selector {
+          display: grid;
+          grid-template-columns: repeat(7, 1fr);
+          gap: 8px;
+        }
+
+        .emoji-selector button {
+          height: 40px;
+          border-radius: 10px;
+          background: rgba(255, 255, 255, 0.05);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          font-size: 20px;
+          cursor: pointer;
+          transition: all 0.2s;
+        }
+
+        .emoji-selector button.active {
+          background: rgba(255, 107, 157, 0.15);
+          border-color: #FF6B9D;
+          transform: scale(1.1);
+        }
+
+        .clickable {
+          cursor: pointer;
+        }
+
+        .clickable:hover {
+          text-decoration: underline;
+        }
+
+        .follow-btn {
+          padding: 10px 32px;
+          border-radius: 12px;
+          border: none;
+          background: linear-gradient(135deg, #FF6B9D 0%, #C06FF9 100%);
+          color: white;
+          font-weight: 800;
+          font-size: 14px;
+          cursor: pointer;
+          transition: all 0.2s;
+        }
+
+        .follow-btn.following {
+          background: rgba(255, 255, 255, 0.05);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          color: #4ECDC4;
+        }
+
+        .profile-info-actions {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          width: 100%;
+        }
+
         /* ===== MAIN CONTENT ===== */
         .main-content {
           flex: 1;
@@ -1006,7 +1582,29 @@ const NakamaHQ = () => {
 
         .create-post-btn:hover {
           transform: translateY(-2px);
-          box-shadow: 0 8px 24px rgba(255, 107, 157, 0.4);
+          box-shadow: 0 8px 10 24px rgba(255, 107, 157, 0.4);
+        }
+
+        .join-btn {
+          padding: 10px 24px;
+          border-radius: 12px;
+          font-weight: 700;
+          font-size: 14px;
+          cursor: pointer;
+          transition: all 0.2s;
+          background: rgba(255, 255, 255, 0.05);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          color: white;
+        }
+
+        .join-btn:hover {
+          background: rgba(255, 255, 255, 0.1);
+        }
+
+        .join-btn.joined {
+          background: transparent;
+          border-color: #4ECDC4;
+          color: #4ECDC4;
         }
 
         .feed-filters {
@@ -1982,6 +2580,86 @@ const NakamaHQ = () => {
             width: 100%;
             justify-content: center;
           }
+        }
+        /* ===== PROFILE ===== */
+        .profile-page {
+          padding-bottom: 48px;
+        }
+
+        .profile-banner {
+          height: 180px;
+          background: linear-gradient(135deg, #FF6B9D 0%, #C06FF9 100%);
+          position: relative;
+        }
+
+        .profile-stats {
+          position: absolute;
+          bottom: 20px;
+          right: 32px;
+          display: flex;
+          gap: 24px;
+        }
+
+        .stat {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          color: white;
+        }
+
+        .stat-value {
+          font-size: 20px;
+          font-weight: 800;
+        }
+
+        .stat-label {
+          font-size: 11px;
+          text-transform: uppercase;
+          opacity: 0.8;
+          font-weight: 700;
+        }
+
+        .profile-header-main {
+          padding: 0 32px;
+          margin-top: -50px;
+          position: relative;
+          z-index: 10;
+        }
+
+        .profile-avatar-large {
+          width: 100px;
+          height: 100px;
+          background: #14182d;
+          border: 4px solid #0a0e27;
+          border-radius: 24px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 48px;
+          margin-bottom: 16px;
+        }
+
+        .profile-header-main h2 {
+          font-size: 28px;
+          font-weight: 800;
+        }
+
+        .profile-header-main p {
+          color: rgba(255, 255, 255, 0.5);
+          font-size: 14px;
+        }
+
+        .empty-state {
+          padding: 48px;
+          text-align: center;
+          background: rgba(255, 255, 255, 0.02);
+          border: 1px dashed rgba(255, 255, 255, 0.1);
+          border-radius: 20px;
+          color: rgba(255, 255, 255, 0.4);
+        }
+
+        .hidden {
+          display: none;
         }
       `}</style>
     </div>
