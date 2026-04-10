@@ -43,36 +43,50 @@ const NakamaHQ = () => {
   
   // Persistence Layer
   const [posts, setPosts] = useState(() => {
-    const saved = localStorage.getItem('nhq_posts');
-    return saved ? JSON.parse(saved) : [
-      {
-        id: 'welcome-1',
-        type: 'text',
-        community: 'Hq*announcements',
-        author: 'NakamaHq_Team',
-        avatar: '💎',
-        title: 'Welcome to the new Nakama HQ! 🎌',
-        content: 'Your ultimate anime social hub is now live. Join communities, share your favorite moments, and connect with other nakamas. Start by creating your first post!',
-        upvotes: 99,
-        comments: 0,
-        timeAgo: 'Just now',
-      }
-    ];
+    try {
+      const saved = localStorage.getItem('nhq_posts');
+      const parsed = saved ? JSON.parse(saved) : null;
+      return Array.isArray(parsed) ? parsed : [
+        {
+          id: 'welcome-1',
+          type: 'text',
+          community: 'Hq*announcements',
+          author: 'NakamaHq_Team',
+          avatar: '💎',
+          title: 'Welcome to the new Nakama HQ! 🎌',
+          content: 'Your ultimate anime social hub is now live. Join communities, share your favorite moments, and connect with other nakamas. Start by creating your first post!',
+          upvotes: 99,
+          comments: 0,
+          timeAgo: 'Just now',
+        }
+      ];
+    } catch (e) {
+      return [];
+    }
   });
 
   const [joinedCommunities, setJoinedCommunities] = useState(() => {
-    const saved = localStorage.getItem('nhq_joined');
-    return saved ? JSON.parse(saved) : ['Hq*anime', 'Hq*manga'];
+    try {
+      const saved = localStorage.getItem('nhq_joined');
+      const parsed = saved ? JSON.parse(saved) : null;
+      return Array.isArray(parsed) ? parsed : ['Hq*anime', 'Hq*manga'];
+    } catch (e) {
+      return ['Hq*anime', 'Hq*manga'];
+    }
   });
 
   const [userVotes, setUserVotes] = useState(() => {
-    const saved = localStorage.getItem('nhq_votes');
-    return saved ? JSON.parse(saved) : {};
+    try {
+      const saved = localStorage.getItem('nhq_votes');
+      const parsed = saved ? JSON.parse(saved) : null;
+      return (parsed && typeof parsed === 'object') ? parsed : {};
+    } catch (e) {
+      return {};
+    }
   });
 
   const [messagingState, setMessagingState] = useState(() => {
-    const saved = localStorage.getItem('nhq_messages');
-    return saved ? JSON.parse(saved) : {
+    const defaultState = {
       activeChatId: 1,
       threads: {
         1: {
@@ -86,6 +100,13 @@ const NakamaHQ = () => {
         }
       }
     };
+    try {
+      const saved = localStorage.getItem('nhq_messages');
+      const parsed = saved ? JSON.parse(saved) : null;
+      return (parsed && parsed.threads) ? parsed : defaultState;
+    } catch (e) {
+      return defaultState;
+    }
   });
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -114,13 +135,23 @@ const NakamaHQ = () => {
     setJoinedCommunities([...joinedCommunities, newComm.fullName]);
   };
   const [communities, setCommunities] = useState(() => {
-    const saved = localStorage.getItem('nhq_communities');
-    return saved ? JSON.parse(saved) : mockCommunities;
+    try {
+      const saved = localStorage.getItem('nhq_communities');
+      const parsed = saved ? JSON.parse(saved) : null;
+      return Array.isArray(parsed) ? parsed : mockCommunities;
+    } catch (e) {
+      return mockCommunities;
+    }
   });
 
   const [followStatus, setFollowStatus] = useState(() => {
-    const saved = localStorage.getItem('nhq_following');
-    return saved ? JSON.parse(saved) : {};
+    try {
+      const saved = localStorage.getItem('nhq_following');
+      const parsed = saved ? JSON.parse(saved) : null;
+      return (parsed && typeof parsed === 'object') ? parsed : {};
+    } catch (e) {
+      return {};
+    }
   });
 
   const [notifications, setNotifications] = useState([
@@ -138,13 +169,33 @@ const NakamaHQ = () => {
     localStorage.setItem('nhq_following', JSON.stringify(followStatus));
   }, [posts, userVotes, joinedCommunities, messagingState, communities, followStatus]);
 
+  const [errorStatus, setErrorStatus] = useState(null);
+
   useEffect(() => {
+    const handleError = (msg, url, lineNo, columnNo, error) => {
+      setErrorStatus(`Error: ${msg} [Line: ${lineNo}]`);
+      return false;
+    };
+    window.onerror = handleError;
+    
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('/sw.js')
         .then(reg => console.log('SW Registered', reg))
         .catch(err => console.log('SW Failed', err));
     }
   }, []);
+
+  if (errorStatus) {
+    return (
+      <div style={{ padding: '40px', background: '#0a0e27', color: '#FF6B9D', height: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+        <h1 style={{ marginBottom: '20px' }}>⚠️ Nakama HQ Error</h1>
+        <p style={{ background: 'rgba(255,255,255,0.05)', padding: '20px', borderRadius: '12px' }}>{errorStatus}</p>
+        <button onClick={() => { localStorage.clear(); window.location.reload(); }} style={{ marginTop: '20px', padding: '12px 24px', background: '#FF6B9D', border: 'none', borderRadius: '8px', color: 'white', fontWeight: 'bold' }}>
+          Reset Site Data
+        </button>
+      </div>
+    );
+  }
 
   const triggerTestNotification = () => {
     if (Notification.permission === 'granted') {
@@ -210,21 +261,22 @@ const NakamaHQ = () => {
 
   const [activeFilter, setActiveFilter] = useState('hot');
 
-  const filteredPosts = posts.filter(post => {
-    const matchesSearch = post.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         post.content.toLowerCase().includes(searchQuery.toLowerCase());
+  const filteredPosts = (posts || []).filter(post => {
+    if (!post || !post.title) return false;
+    const matchesSearch = (post.title || "").toLowerCase().includes((searchQuery || "").toLowerCase()) ||
+                         (post.content || "").toLowerCase().includes((searchQuery || "").toLowerCase());
     
     if (!matchesSearch) return false;
 
     if (activeTab === 'home') {
-      return joinedCommunities.includes(post.community) || post.author === 'you' || post.id === 'welcome-1';
+      return (joinedCommunities || []).includes(post.community) || post.author === 'you' || post.id === 'welcome-1';
     }
     
     if (activeTab === 'community' && selectedCommunity) {
       return post.community === selectedCommunity.fullName;
     }
 
-    return true; // Show all in 'All Communities' if no community selected
+    return true; 
   });
 
   const handleVote = (postId, voteType) => {
@@ -432,7 +484,7 @@ const NakamaHQ = () => {
                   <Plus size={14} />
                 </button>
               </div>
-              {communities.map(community => (
+              {(communities || []).map(community => (
                 <button 
                   key={community.id}
                   className="community-item"
@@ -562,7 +614,7 @@ const NakamaHQ = () => {
               className={`filter-btn ${activeFilter === 'new' ? 'active' : ''}`}
               onClick={() => setActiveFilter('new')}
             >
-              <BarChart3 size={16} />
+              <TrendingUp size={16} style={{ transform: 'rotate(90deg)' }} />
               <span>New</span>
             </button>
             <button 
@@ -581,7 +633,7 @@ const NakamaHQ = () => {
             <div className="profile-banner">
               <div className="profile-stats">
                 <div className="stat">
-                  <span className="stat-value">{posts.filter(p => p.author === (viewedUser || 'you')).length}</span>
+                  <span className="stat-value">{(posts || []).filter(p => p && p.author === (viewedUser || 'you')).length}</span>
                   <span className="stat-label">Posts</span>
                 </div>
                 <div className="stat">
@@ -641,7 +693,7 @@ const NakamaHQ = () => {
         {/* Posts Feed */}
         {(activeTab === 'home' || activeTab === 'community') && (
           <div className="posts-feed">
-            {filteredPosts.map(post => (
+            {(filteredPosts || []).map(post => (
               <PostCard key={post.id} post={post} />
             ))}
           </div>
@@ -724,7 +776,7 @@ const NakamaHQ = () => {
               </div>
               
               <div className="chat-messages">
-                {messagingState.threads[messagingState.activeChatId]?.messages.map(msg => (
+                {(messagingState.threads[messagingState.activeChatId]?.messages || []).map(msg => (
                   <div key={msg.id} className={`message ${msg.isMe ? 'sent' : 'received'}`}>
                     {!msg.isMe && <div className="message-avatar">🌸</div>}
                     <div className="message-content">
@@ -802,7 +854,7 @@ const NakamaHQ = () => {
       </div>
 
       {/* Bottom Navigation for Mobile */}
-      <div className="bottom-nav sm:hidden">
+      <div className="bottom-nav">
         <button className={activeTab === 'home' ? 'active' : ''} onClick={() => { setActiveTab('home'); setSelectedCommunity(null); setViewedUser(null); }}>
           <Home size={24} />
         </button>
