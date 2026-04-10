@@ -27,7 +27,7 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
 
   const sidebarVariants = {
     open: { width: 280, x: 0 },
-    closed: { width: 80, x: 0 }
+    closed: { width: 90, x: 0 }
   };
 
   return (
@@ -52,32 +52,34 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 px-4 py-8 space-y-2">
-        {navItems.map((item) => (
-          <NavLink
-            key={item.name}
-            to={item.path}
-            className={({ isActive }) => `
-              flex items-center gap-4 p-3 rounded-xl transition-all group
-              ${isActive 
-                ? 'bg-pink-500/10 text-pink-500 shadow-[inset_0_0_12px_rgba(255,107,157,0.1)]' 
-                : 'text-muted hover:bg-white/5 hover:text-white'}
-            `}
-          >
-            <item.icon size={24} className="flex-shrink-0" />
-            <motion.span
-              animate={{ opacity: isOpen ? 1 : 0, x: isOpen ? 0 : -10 }}
-              className="font-cinzel text-sm font-bold tracking-widest whitespace-nowrap"
+      <nav className="flex-1 px-4 py-8 overflow-y-auto">
+        <div className="space-y-3">
+          {navItems.map((item) => (
+            <NavLink
+              key={item.name}
+              to={item.path}
+              className={({ isActive }) => `
+                flex items-center gap-4 p-3.5 rounded-xl transition-all relative group
+                ${isActive 
+                  ? 'bg-pink-500/15 text-pink-500 shadow-[inset_0_0_15px_rgba(255,107,157,0.1)] border border-pink-500/20' 
+                  : 'text-muted hover:bg-white/5 hover:text-white'}
+              `}
             >
-              {item.name}
-            </motion.span>
-            {!isOpen && (
-              <div className="absolute left-20 bg-pink-500 text-white text-[10px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+              <item.icon size={22} className="flex-shrink-0" />
+              <motion.span
+                animate={{ opacity: isOpen ? 1 : 0, x: isOpen ? 0 : -10 }}
+                className="font-cinzel text-[13px] font-bold tracking-widest whitespace-nowrap"
+              >
                 {item.name}
-              </div>
-            )}
-          </NavLink>
-        ))}
+              </motion.span>
+              {!isOpen && (
+                <div className="absolute left-20 bg-pink-500 text-white text-[10px] px-3 py-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-[100] shadow-lg">
+                  {item.name}
+                </div>
+              )}
+            </NavLink>
+          ))}
+        </div>
       </nav>
 
       {/* Collapse Handle */}
