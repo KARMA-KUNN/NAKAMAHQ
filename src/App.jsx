@@ -109,6 +109,7 @@ const NakamaHQ = () => {
   });
 
   const [searchQuery, setSearchQuery] = useState('');
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [formData, setFormData] = useState({ title: '', content: '', community: 'Hq*anime', type: 'text', mediaUrl: '' });
 
   const [viewedUser, setViewedUser] = useState(null);
