@@ -16,7 +16,6 @@ import {
   ArrowUp, 
   ArrowDown, 
   Link as LinkIcon, 
-  BarChart3, 
   Send, 
   Search, 
   Bell, 
